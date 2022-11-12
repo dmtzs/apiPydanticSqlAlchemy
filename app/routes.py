@@ -1,9 +1,9 @@
 try:
     from .models import Users
-    from app import app, database
-    from flask import request, jsonify
+    from app import app, database    
     from flask_pydantic import validate
-    from .validators import FindUserRequest, AddUserRequest, GeneralDataResponse, DataResponse
+    from flask import request, jsonify, make_response
+    from .validators import FindUserRequest, AddUserRequest, GeneralDataResponse, DataResponse, DeleteUserRequest
 except ImportError as e_imp:
     print(f"The following import ERROR occurred in {__file__}: {e_imp}")
 
@@ -32,7 +32,7 @@ def get_users():
         my_error = {
             "msg": "Internal server error"
         }
-        return jsonify(my_error), 500
+        return make_response(jsonify(my_error), 500)
 
 @app.route("/api/finduser", methods=["GET"])
 @validate()
@@ -53,7 +53,7 @@ def get_user(query: FindUserRequest):
             my_error = {
                 "msg": "This user doesnt exists"
             }
-            return jsonify(my_error), 200
+            return make_response(jsonify(my_error), 200)
         else:
             response = [user.serializer() for user in users]
 
@@ -75,7 +75,7 @@ def get_user(query: FindUserRequest):
         my_error = {
             "msg": "Internal server error"
         }
-        return jsonify(my_error), 500
+        return make_response(jsonify(my_error), 500)
 
 @app.route("/api/adduser", methods=["POST"])
 @validate()
@@ -105,4 +105,37 @@ def add_user(body: AddUserRequest):
         my_error = {
             "msg": "Internal server error"
         }
-        return jsonify(my_error), 500
+        return make_response(jsonify(my_error), 500)
+
+@app.route("/api/deleteuser", methods=["DELETE"])
+@validate()
+def delete_user(body: DeleteUserRequest):
+    try:
+        rowid = body.rowid
+
+        single_user = Users.query.filter_by(rowid=rowid).first()
+        result = single_user.serializer()
+
+        if not single_user:
+            my_error = {
+                "msg": "This user doesnt exists"
+            }
+            return make_response(jsonify(my_error), 404)
+        else:
+            database.session.delete(single_user)
+            database.session.commit()
+
+            return GeneralDataResponse(
+                rowid=result["rowid"],
+                name=result["name"],
+                last_name=result["last_name"],
+                age=result["age"],
+                mail=result["mail"],
+                message="User deleted"
+            )
+    except Exception as ex:
+        print(f"The following ERROR occurred in {__file__}: {ex}")
+        my_error = {
+            "msg": "Internal server error"
+        }
+        return make_response(jsonify(my_error), 500)

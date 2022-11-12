@@ -15,6 +15,6 @@ database.init_app(app)
 
 # auth = HTTPBasicAuth()
 
-from app import routes, error_handlers
+from app import routes
 
 __version__ = "1.0.0"

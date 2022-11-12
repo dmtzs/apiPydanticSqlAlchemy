@@ -21,6 +21,10 @@ class GeneralDataResponse(BaseModel):
     last_name: str
     age: int
     mail: str
+    message: Optional[str] = None
 
 class DataResponse(BaseModel):
     data: list[dict]
+
+class DeleteUserRequest(BaseModel):
+    rowid: int
