@@ -18,15 +18,16 @@ def get_users():
         try:
             for validate in response:
                 _ = GeneralDataResponse(**validate)
-                return DataResponse(
+                my_response = DataResponse(
                     data=response
-                )
+                ).dict()
+                return make_response(jsonify(my_response), 200)
         except Exception as ex:
             print(f"Validation error inside data array: {ex}")
             my_error = {
                 "msg": "Error en los objetos json dentro de data"
             }
-            return jsonify(my_error), 500
+            return make_response(jsonify(my_error), 500)
     except Exception as ex:
         print(f"The following ERROR occurred in {__file__}: {ex}")
         my_error = {
@@ -65,11 +66,12 @@ def get_user(query: FindUserRequest):
                 my_error = {
                     "msg": "Error en los objetos json dentro de data"
                 }
-                return jsonify(my_error), 500
+                return make_response(jsonify(my_error), 500)
 
-            return DataResponse(
+            response = DataResponse(
                 data=response
-            )
+            ).dict()
+            return make_response(jsonify(response), 200)
     except Exception as ex:
         print(f"The following ERROR occurred in {__file__}: {ex}")
         my_error = {
@@ -91,14 +93,15 @@ def add_user(body: AddUserRequest):
         database.session.commit()
 
         response = add_user.serializer()
-
-        return GeneralDataResponse(
+        response = GeneralDataResponse(
             rowid=response["rowid"],
             name=response["name"],
             last_name=response["last_name"],
             age=response["age"],
             mail=response["mail"]
-        )
+        ).dict()
+
+        return make_response(jsonify(response), 200)
 
     except Exception as ex:
         print(f"The following ERROR occurred in {__file__}: {ex}")
@@ -124,15 +127,16 @@ def delete_user(body: DeleteUserRequest):
         else:
             database.session.delete(single_user)
             database.session.commit()
-
-            return GeneralDataResponse(
+            response = GeneralDataResponse(
                 rowid=result["rowid"],
                 name=result["name"],
                 last_name=result["last_name"],
                 age=result["age"],
                 mail=result["mail"],
                 message="User deleted"
-            )
+            ).dict()
+
+            return make_response(jsonify(response), 200)
     except Exception as ex:
         print(f"The following ERROR occurred in {__file__}: {ex}")
         my_error = {

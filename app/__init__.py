@@ -1,7 +1,6 @@
 try:
     from flask import Flask
     from flask_sqlalchemy import SQLAlchemy
-    # from flask_httpauth import HTTPBasicAuth
 except ImportError as e_imp:
     print(f"The following import ERROR occurred in {__file__}: {e_imp}")
 
@@ -11,9 +10,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 database = SQLAlchemy()
 database.init_app(app)
-
-
-# auth = HTTPBasicAuth()
 
 from app import routes
 
