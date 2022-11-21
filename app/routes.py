@@ -1,10 +1,10 @@
 try:
     from .models import Users
     from typing import Optional
-    from app import app, database    
+    from app import app, database
     from flask_pydantic import validate
     from flask import jsonify, make_response, abort, Response
-    from .validators import FindUserRequest, AddUserRequest, GeneralDataResponse, DataResponse, DeleteUserRequest
+    from .validators import GeneralDataResponse, DataResponse, FindUserRequest, UpdateUserRequest
 except ImportError as e_imp:
     print(f"The following import ERROR occurred in {__file__}: {e_imp}")
 
@@ -47,67 +47,45 @@ def find_user(query: FindUserRequest) -> Optional[Response]:
     except Exception as ex:
         per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
 
-@app.route("/api/adduser", methods=["POST"])
+@app.route("/api/adduser", methods= ["POST"])
 @validate()
-def add_user(body: AddUserRequest):
+def add_user(body: GeneralDataResponse) -> Optional[Response]:
     try:
-        name = body.name
-        last_name = body.last_name
-        age = body.age
-        mail = body.mail
-
-        add_user = Users(name, last_name, age, mail)
-        database.session.add(add_user)
+        response = body.dict()
+        user = Users(**response)
+        database.session.add(user)
         database.session.commit()
-
-        response = add_user.serializer()
-        response = GeneralDataResponse(
-            rowid=response["rowid"],
-            name=response["name"],
-            last_name=response["last_name"],
-            age=response["age"],
-            mail=response["mail"]
-        ).dict()
-
+        response["message"] = "User added successfully"
         return make_response(jsonify(response), 200)
-
     except Exception as ex:
-        print(f"The following ERROR occurred in {__file__}: {ex}")
-        my_error = {
-            "msg": "Internal server error"
-        }
-        return make_response(jsonify(my_error), 500)
+        per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
 
-@app.route("/api/deleteuser", methods=["DELETE"])
+@app.route("/api/updateuser", methods= ["PUT"])
 @validate()
-def delete_user(body: DeleteUserRequest):
+def update_user(body: UpdateUserRequest) -> Optional[Response]:
     try:
-        rowid = body.rowid
-
-        single_user = Users.query.filter_by(rowid=rowid).first()
-        result = single_user.serializer()
-
-        if not single_user:
-            my_error = {
-                "msg": "This user doesnt exists"
-            }
-            return make_response(jsonify(my_error), 404)
-        else:
-            database.session.delete(single_user)
-            database.session.commit()
-            response = GeneralDataResponse(
-                rowid=result["rowid"],
-                name=result["name"],
-                last_name=result["last_name"],
-                age=result["age"],
-                mail=result["mail"],
-                message="User deleted"
-            ).dict()
-
-            return make_response(jsonify(response), 200)
+        response = body.dict()
+        user = Users.query.filter_by(id=response["id"]).first()
+        for key, value in response.items():
+            if value is not None:
+                setattr(user, key, value)
+        database.session.commit()
+        response["message"] = "User updated successfully"
+        return make_response(jsonify(response), 200)
     except Exception as ex:
-        print(f"The following ERROR occurred in {__file__}: {ex}")
-        my_error = {
-            "msg": "Internal server error"
+        per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
+
+@app.route("/api/deleteuser/<id>", methods= ["DELETE"])
+@validate()
+def delete_user(id: int) -> Optional[Response]:
+    try:
+        user = Users.query.filter_by(id=id).first()
+        database.session.delete(user)
+        database.session.commit()
+        response = {
+            "id": id,
+            "message": "User deleted successfully"
         }
-        return make_response(jsonify(my_error), 500)
+        return make_response(jsonify(response), 200)
+    except Exception as ex:
+        per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
