@@ -1,83 +1,51 @@
 try:
     from .models import Users
+    from typing import Optional
     from app import app, database    
     from flask_pydantic import validate
-    from flask import request, jsonify, make_response
+    from flask import jsonify, make_response, abort, Response
     from .validators import FindUserRequest, AddUserRequest, GeneralDataResponse, DataResponse, DeleteUserRequest
 except ImportError as e_imp:
     print(f"The following import ERROR occurred in {__file__}: {e_imp}")
 
-@app.route("/api/users", methods=["GET"])
+def per_error(msg: dict, status_code: int) -> None:
+    abort(make_response(jsonify(msg), status_code))
+
+# -------------Endpoints-------------
+@app.route("/api/users", methods= ["GET"])
 @validate()
-def get_users():
+def get_users() -> Optional[Response]:
     try:
         users = Users.query.all()
-
-        response = [user.serializer() for user in users]
+        users_serialized = [user.serializer() for user in users]
 
         try:
-            for validate in response:
+            for validate in users_serialized:
                 _ = GeneralDataResponse(**validate)
-                my_response = DataResponse(
-                    data=response
-                ).dict()
+                my_response = DataResponse(data=users_serialized).dict()
                 return make_response(jsonify(my_response), 200)
         except Exception as ex:
-            print(f"Validation error inside data array: {ex}")
-            my_error = {
-                "msg": "Error en los objetos json dentro de data"
-            }
-            return make_response(jsonify(my_error), 500)
+            per_error({"error": "Validation error inside data array"}, 500)
     except Exception as ex:
-        print(f"The following ERROR occurred in {__file__}: {ex}")
-        my_error = {
-            "msg": "Internal server error"
-        }
-        return make_response(jsonify(my_error), 500)
+        per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
 
-@app.route("/api/finduser", methods=["GET"])
+@app.route("/api/finduser", methods= ["GET"])
 @validate()
-def get_user(query: FindUserRequest):
+def find_user(query: FindUserRequest) -> Optional[Response]:
     try:
-        fields = {}
+        clean_dict = {key: value for key, value in query.dict().items() if value is not None}
+        users = Users.query.filter_by(**clean_dict).all()
+        users_serialized = [user.serializer() for user in users]
 
-        if "name" in request.args:
-            fields["name"] = query.name
-        if "last_name" in request.args:
-            fields["last_name"] = query.last_name
-        if "age" in request.args:
-            fields["age"] = query.age
-        
-        users = Users.query.filter_by(**fields)
-
-        if not users:
-            my_error = {
-                "msg": "This user doesnt exists"
-            }
-            return make_response(jsonify(my_error), 200)
-        else:
-            response = [user.serializer() for user in users]
-
-            try:
-                for validate in response:
-                    _ = GeneralDataResponse(**validate)
-            except Exception as ex:
-                print(f"Validation error inside data array: {ex}")
-                my_error = {
-                    "msg": "Error en los objetos json dentro de data"
-                }
-                return make_response(jsonify(my_error), 500)
-
-            response = DataResponse(
-                data=response
-            ).dict()
-            return make_response(jsonify(response), 200)
+        try:
+            for validate in users_serialized:
+                _ = GeneralDataResponse(**validate)
+                my_response = DataResponse(data=users_serialized).dict()
+                return make_response(jsonify(my_response), 200)
+        except Exception as ex:
+            per_error({"error": "Validation error inside data array"}, 500)
     except Exception as ex:
-        print(f"The following ERROR occurred in {__file__}: {ex}")
-        my_error = {
-            "msg": "Internal server error"
-        }
-        return make_response(jsonify(my_error), 500)
+        per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
 
 @app.route("/api/adduser", methods=["POST"])
 @validate()
