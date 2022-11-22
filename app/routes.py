@@ -3,9 +3,8 @@ try:
     from typing import Optional
     from app import app, database
     from flask_pydantic import validate
-    from flask_pydantic.exceptions import ValidationError
     from flask import jsonify, make_response, abort, Response
-    from .response_messages import no_users, validation_data_error
+    from .response_messages import no_users
     from .validators import GeneralDataResponse, DataResponse, FindUserRequest, UpdateUserRequest
 except ImportError as e_imp:
     print(f"The following import ERROR occurred in {__file__}: {e_imp}")
@@ -24,13 +23,10 @@ def get_users() -> Optional[Response]:
     if len(users_serialized) == 0:
         per_error(no_users, 404)
 
-    try:
-        for validate in users_serialized:
-            _ = GeneralDataResponse(**validate)
-            my_response = DataResponse(data=users_serialized).dict()
-            return make_response(jsonify(my_response), 200)
-    except ValidationError:
-        per_error(validation_data_error, 500)
+    for validate in users_serialized:
+        _ = GeneralDataResponse(**validate)
+        my_response = DataResponse(data=users_serialized).dict()
+        return make_response(jsonify(my_response), 200)
 
 @app.route("/api/finduser", methods= ["GET"])
 @validate()
@@ -41,13 +37,10 @@ def find_user(query: FindUserRequest) -> Optional[Response]:
     if len(users_serialized) == 0:
         per_error(no_users, 404)
 
-    try:
-        for validate in users_serialized:
-            _ = GeneralDataResponse(**validate)
-            my_response = DataResponse(data=users_serialized).dict()
-            return make_response(jsonify(my_response), 200)
-    except ValidationError:
-        per_error(validation_data_error, 500)
+    for validate in users_serialized:
+        _ = GeneralDataResponse(**validate)
+        my_response = DataResponse(data=users_serialized).dict()
+        return make_response(jsonify(my_response), 200)
 
 @app.route("/api/adduser", methods= ["POST"])
 @validate()
