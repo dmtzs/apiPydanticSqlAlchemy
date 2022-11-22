@@ -1,11 +1,8 @@
 try:
-    import traceback
     from .models import Users
     from typing import Optional
     from app import app, database
     from flask_pydantic import validate
-    from sqlalchemy.exc import IntegrityError
-    from sqlite3 import IntegrityError as IntegrityError2
     from flask_pydantic.exceptions import ValidationError
     from flask import jsonify, make_response, abort, Response
     from .response_messages import no_users, validation_data_error
