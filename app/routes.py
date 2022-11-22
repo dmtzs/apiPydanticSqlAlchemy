@@ -4,6 +4,7 @@ try:
     from app import app, database
     from flask_pydantic import validate
     from flask import jsonify, make_response, abort, Response
+    from .response_messages import no_users, validation_data_error
     from .validators import GeneralDataResponse, DataResponse, FindUserRequest, UpdateUserRequest
 except ImportError as e_imp:
     print(f"The following import ERROR occurred in {__file__}: {e_imp}")
@@ -18,6 +19,8 @@ def get_users() -> Optional[Response]:
     try:
         users = Users.query.all()
         users_serialized = [user.serializer() for user in users]
+        if len(users_serialized) == 0:
+            per_error(no_users, 404)
 
         try:
             for validate in users_serialized:
@@ -25,7 +28,7 @@ def get_users() -> Optional[Response]:
                 my_response = DataResponse(data=users_serialized).dict()
                 return make_response(jsonify(my_response), 200)
         except Exception as ex:
-            per_error({"error": "Validation error inside data array"}, 500)
+            per_error(validation_data_error, 500)
     except Exception as ex:
         per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
 
@@ -36,6 +39,8 @@ def find_user(query: FindUserRequest) -> Optional[Response]:
         clean_dict = {key: value for key, value in query.dict().items() if value is not None}
         users = Users.query.filter_by(**clean_dict).all()
         users_serialized = [user.serializer() for user in users]
+        if len(users_serialized) == 0:
+            per_error(no_users, 404)
 
         try:
             for validate in users_serialized:
@@ -43,7 +48,7 @@ def find_user(query: FindUserRequest) -> Optional[Response]:
                 my_response = DataResponse(data=users_serialized).dict()
                 return make_response(jsonify(my_response), 200)
         except Exception as ex:
-            per_error({"error": "Validation error inside data array"}, 500)
+            per_error(validation_data_error, 500)
     except Exception as ex:
         per_error({"error": f"The following ERROR occurred in {__file__}: {ex}"}, 500)
 
